@@ -26,3 +26,15 @@ repos:
     rev: 20.8b1
     hooks:
     -   id: black
+-   repo: https://github.com/nbQA-dev/nbQA
+    rev: 0.5.9
+    hooks:
+    -   id: nbqa-isort
+        args: [--nbqa-mutate]
+    -   id: nbqa-black
+        args: [--nbqa-mutate]
+    -   id: nbqa-pyupgrade
+        args: [--nbqa-mutate]
+    -   id: nbqa-mypy
+        args: [--nbqa-mutate]
+        types: [jupyter]

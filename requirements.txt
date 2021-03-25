@@ -11,3 +11,6 @@ numpy
 matplotlib
 plotnine
 scikit-learn
+jupyterlab
+jupyterlab_code_formatter
+seaborn

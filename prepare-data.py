@@ -139,8 +139,8 @@ def compile_data(meta_data: List[MetaData], source: str) -> pd.DataFrame:
 
 
 def save_compiled_data(source: str, data: pd.DataFrame) -> Path:
-    p = df_dir / (source + ".csv")
-    data.to_csv(p, index=False)
+    p = df_dir / (source + ".pkl")
+    data.to_pickle(path=p.as_posix())
     return p
 
 
