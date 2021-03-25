@@ -6,3 +6,8 @@ requests
 weather-forecast-collection @ git+https://github.com/jhrcook/weather_forecast_collection.git@v0.1.1
 typer
 PyGithub
+pandas
+numpy
+matplotlib
+plotnine
+scikit-learn
