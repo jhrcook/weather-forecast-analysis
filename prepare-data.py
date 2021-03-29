@@ -20,12 +20,13 @@ from weather_forecast_collection.apis import national_weather_service_api as nws
 from weather_forecast_collection.apis import openweathermap_api as owm
 
 from keys import GITHUB_ACCESS_TOKEN
+from src.data_conversions.climacell_to_dataframe import climacell_to_dataframe
 from src.data_conversions.nws_to_dataframe import nws_to_dataframe
 
 json_data_dir = Path("data", "json-data")
 pkl_dir = Path("data", "pkl-data")
 df_dir = Path("data", "dataframes")
-for dir in [json_data_dir, pkl_dir]:
+for dir in [json_data_dir, pkl_dir, df_dir]:
     if not dir.exists():
         dir.mkdir()
 
@@ -88,7 +89,7 @@ def parse_json_filepath(path: Path) -> MetaData:
 def get_data_model(name: str) -> Type[BaseModel]:
     d: Dict[str, Type[BaseModel]] = {
         "climacell": cc.CCForecastData,
-        "national-weather-service": nws.NSWForecast,
+        "national-weather-service": nws.NWSForecast,
         "accuweather": accu.AccuForecast,
         "open-weather-map": owm.OWMForecast,
     }
@@ -114,9 +115,6 @@ def pickle_data_types() -> List[MetaData]:
     for json_data in json_data_dir.iterdir():
         meta_data = parse_json_filepath(json_data)
         meta_datas.append(meta_data)
-        # TODO: Currently only works for NWS. (issue opened in collection package)
-        if meta_data.source != "national-weather-service":
-            continue
         data = parse_json(meta_data)
         pickle_data(data, meta_data)
     return meta_datas
@@ -132,16 +130,21 @@ def read_pickle(p: Path) -> Any:
 
 def compile_data(meta_data: List[MetaData], source: str) -> pd.DataFrame:
     # TODO: Add other services when data types are fixed.
-    fxns: Dict[str, Callable] = {"national-weather-service": nws_to_dataframe}
+    fxns: Dict[str, Callable] = {
+        "climacell": climacell_to_dataframe,
+        "national-weather-service": nws_to_dataframe,
+    }
     data = [read_pickle(md.pkl_path) for md in meta_data]
     fxn = fxns[source]
-    return fxn(data)
+    return fxn(data, cities=[d.city for d in meta_data])
 
 
 def save_compiled_data(source: str, data: pd.DataFrame) -> Path:
-    p = df_dir / (source + ".pkl")
-    data.to_pickle(path=p.as_posix())
-    return p
+    pkl_path = df_dir / (source + ".pkl")
+    csv_path = df_dir / (source + ".csv")
+    data.to_pickle(path=pkl_path.as_posix())
+    data.to_csv(csv_path)
+    return csv_path
 
 
 if __name__ == "__main__":
@@ -149,7 +152,7 @@ if __name__ == "__main__":
     meta_data = pickle_data_types()
     sources = set([d.source for d in meta_data])
     for source in sources:
-        if source != "national-weather-service":
+        if source != "climacell":
             continue
         md = [d for d in meta_data if d.source == source]
         data = compile_data(md, source)

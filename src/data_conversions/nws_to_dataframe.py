@@ -16,8 +16,8 @@ def nws_periods_to_dataframe(periods: List[nws.NWSPeriodForecast]) -> pd.DataFra
     return pd.concat([nws_period_to_dataframe(p) for p in periods])
 
 
-def nws_to_dataframe(forecasts: List[nws.NSWForecast]) -> pd.DataFrame:
-    # TODO: Add collection timestamp when added to data object.
+def nws_to_dataframe(forecasts: List[nws.NWSForecast]) -> pd.DataFrame:
+    # TODO: incorporate timestamps.
     daily_df = pd.concat(
         [nws_periods_to_dataframe(f.seven_day.periods) for f in forecasts]
     )
