@@ -43,4 +43,4 @@ def climacell_to_dataframe(
             forecast_to_dataframe(forecast, city)
             for forecast, city in zip(forecasts, cities)
         ]
-    )
+    ).reset_index(drop=True)

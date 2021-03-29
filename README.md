@@ -8,9 +8,9 @@
 
 An analysis of weather forecast and nowcast data collected in the ['weather-forecast-data'](https://github.com/jhrcook/weather-forecast-data) repository.
 
-The goal is to understand and compare weather predicitons from multiple data sources.
+The goal is to understand and compare weather predictions from multiple data sources.
 Hopefully, I'll be able to identify trends in error that will help me decide which source is the most reliable.
-It may also be possible to create a simple machine learning model to make predicitons using data from all of the sources.
+It may also be possible to create a simple machine learning model to make predictions using data from all of the sources.
 
 ## Data
 

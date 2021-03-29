@@ -152,7 +152,7 @@ if __name__ == "__main__":
     meta_data = pickle_data_types()
     sources = set([d.source for d in meta_data])
     for source in sources:
-        if source != "climacell":
+        if source not in ["national-weather-service"]:
             continue
         md = [d for d in meta_data if d.source == source]
         data = compile_data(md, source)

@@ -3,7 +3,7 @@ mypy
 isort
 pydantic
 requests
-weather-forecast-collection @ git+https://github.com/jhrcook/weather_forecast_collection.git@v0.1.1
+weather-forecast-collection @ git+https://github.com/jhrcook/weather_forecast_collection.git@v0.1.5
 typer
 PyGithub
 pandas
