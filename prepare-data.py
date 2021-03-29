@@ -20,6 +20,7 @@ from weather_forecast_collection.apis import national_weather_service_api as nws
 from weather_forecast_collection.apis import openweathermap_api as owm
 
 from keys import GITHUB_ACCESS_TOKEN
+from src.data_conversions.accuweather_to_dataframe import accu_to_dataframe
 from src.data_conversions.climacell_to_dataframe import climacell_to_dataframe
 from src.data_conversions.nws_to_dataframe import nws_to_dataframe
 
@@ -131,6 +132,7 @@ def read_pickle(p: Path) -> Any:
 def compile_data(meta_data: List[MetaData], source: str) -> pd.DataFrame:
     # TODO: Add other services when data types are fixed.
     fxns: Dict[str, Callable] = {
+        "accuweather": accu_to_dataframe,
         "climacell": climacell_to_dataframe,
         "national-weather-service": nws_to_dataframe,
     }
@@ -152,7 +154,7 @@ if __name__ == "__main__":
     meta_data = pickle_data_types()
     sources = set([d.source for d in meta_data])
     for source in sources:
-        if source not in ["national-weather-service"]:
+        if source == "accuweather":
             continue
         md = [d for d in meta_data if d.source == source]
         data = compile_data(md, source)
