@@ -23,6 +23,7 @@ from keys import GITHUB_ACCESS_TOKEN
 from src.data_conversions.accuweather_to_dataframe import accu_to_dataframe
 from src.data_conversions.climacell_to_dataframe import climacell_to_dataframe
 from src.data_conversions.nws_to_dataframe import nws_to_dataframe
+from src.data_conversions.owm_to_dataframe import owm_to_dataframe
 
 json_data_dir = Path("data", "json-data")
 pkl_dir = Path("data", "pkl-data")
@@ -135,6 +136,7 @@ def compile_data(meta_data: List[MetaData], source: str) -> pd.DataFrame:
         "accuweather": accu_to_dataframe,
         "climacell": climacell_to_dataframe,
         "national-weather-service": nws_to_dataframe,
+        "open-weather-map": owm_to_dataframe,
     }
     data = [read_pickle(md.pkl_path) for md in meta_data]
     fxn = fxns[source]
@@ -152,6 +154,7 @@ def save_compiled_data(source: str, data: pd.DataFrame) -> Path:
 if __name__ == "__main__":
     download_forecast_data_files()
     meta_data = pickle_data_types()
+    print(f"Downloaded and pickled {len(meta_data)} data points.")
     sources = set([d.source for d in meta_data])
     for source in sources:
         if source == "accuweather":
