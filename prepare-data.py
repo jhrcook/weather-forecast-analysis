@@ -3,6 +3,7 @@
 """Download and organize the forecast data from the GitHub repo "jhrcook/weather-forecast-data"."""
 
 import json
+import logging
 import pickle
 import urllib.parse as urlparse
 from datetime import datetime
@@ -25,6 +26,8 @@ from src.data_conversions.climacell_to_dataframe import climacell_to_dataframe
 from src.data_conversions.nws_to_dataframe import nws_to_dataframe
 from src.data_conversions.owm_to_dataframe import owm_to_dataframe
 
+logging.basicConfig(level=logging.INFO)
+
 json_data_dir = Path("data", "json-data")
 pkl_dir = Path("data", "pkl-data")
 df_dir = Path("data", "dataframes")
@@ -40,15 +43,21 @@ def make_file_name(url: str) -> Path:
     return json_data_dir / urlparse.unquote(Path(url).name)
 
 
-def download_data_file(url: str, force: bool = False) -> Path:
+def download_data_file(url: str, force: bool = False, n_attempt: int = 1) -> Path:
+    MAX_ATTEMPTS = 3
     path = make_file_name(url)
 
     if path.exists() and not force:
         return path
 
     response = requests.get(url)
-    with open(path, "wb") as file:
-        file.write(response.content)
+    if response.status_code == 200:
+        with open(path, "wb") as file:
+            file.write(response.content)
+    elif n_attempt <= MAX_ATTEMPTS:
+        download_data_file(url=url, n_attempt=n_attempt + 1)
+    else:
+        logging.error(f"Failed to aquire {url} after {MAX_ATTEMPTS} attempts.")
 
     return path
 
@@ -57,7 +66,10 @@ def download_forecast_data_files():
     g = Github(GITHUB_ACCESS_TOKEN)
     data_repo = g.get_repo("jhrcook/weather-forecast-data")
     contents = data_repo.get_contents("data", "weather-data")
-    for data_file in contents:
+    data_files = list(contents)
+    logging.info(f"Found {len(data_files)} data files in GitHub repo.")
+    raise Exception("Stopped early on purpose.")
+    for data_file in data_files:
         _ = download_data_file(data_file.download_url, force=False)
 
 
