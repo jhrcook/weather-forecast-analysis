@@ -12,8 +12,8 @@ from typing import Any, Callable, Dict, List, Type
 
 import pandas as pd
 import requests
+import typer
 from github import Github
-from pandas.core.frame import DataFrame
 from pydantic import BaseModel
 from weather_forecast_collection.apis import accuweather_api as accu
 from weather_forecast_collection.apis import climacell_api as cc
@@ -26,7 +26,7 @@ from src.data_conversions.climacell_to_dataframe import climacell_to_dataframe
 from src.data_conversions.nws_to_dataframe import nws_to_dataframe
 from src.data_conversions.owm_to_dataframe import owm_to_dataframe
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="[%(levelname)s] - %(message)s")
 
 json_data_dir = Path("data", "json-data")
 pkl_dir = Path("data", "pkl-data")
@@ -35,6 +35,7 @@ for dir in [json_data_dir, pkl_dir, df_dir]:
     if not dir.exists():
         dir.mkdir()
 
+data_branch = "weather-data"
 
 #### ---- Download raw data from GitHub repo ---- ####
 
@@ -62,15 +63,23 @@ def download_data_file(url: str, force: bool = False, n_attempt: int = 1) -> Pat
     return path
 
 
-def download_forecast_data_files():
+def get_data_urls() -> List[str]:
     g = Github(GITHUB_ACCESS_TOKEN)
+    urls: List[str] = []
     data_repo = g.get_repo("jhrcook/weather-forecast-data")
-    contents = data_repo.get_contents("data", "weather-data")
-    data_files = list(contents)
-    logging.info(f"Found {len(data_files)} data files in GitHub repo.")
-    raise Exception("Stopped early on purpose.")
-    for data_file in data_files:
-        _ = download_data_file(data_file.download_url, force=False)
+    for first_lvl_dir in data_repo.get_contents("data", data_branch):
+        for second_lvl_dir in data_repo.get_contents(first_lvl_dir.path, data_branch):
+            for data_file in data_repo.get_contents(second_lvl_dir.path, data_branch):
+                urls.append(data_file.download_url)
+    return urls
+
+
+def download_forecast_data_files(force_download: bool = False):
+    data_file_urls = get_data_urls()
+    logging.info(f"Found {len(data_file_urls)} data files in GitHub repo.")
+    with typer.progressbar(data_file_urls) as progress:
+        for url in progress:
+            _ = download_data_file(url, force=force_download)
 
 
 #### ---- Convert JSON data into pickled models ---- ####
@@ -124,13 +133,16 @@ def pickle_data(d: BaseModel, meta_data: MetaData, force: bool = False) -> None:
     return
 
 
-def pickle_data_types() -> List[MetaData]:
+def pickle_data_types(force: bool = False) -> List[MetaData]:
     meta_datas: List[MetaData] = []
-    for json_data in json_data_dir.iterdir():
-        meta_data = parse_json_filepath(json_data)
-        meta_datas.append(meta_data)
-        data = parse_json(meta_data)
-        pickle_data(data, meta_data)
+    all_json_files = list(json_data_dir.iterdir())
+    with typer.progressbar(all_json_files) as progress:
+        for json_data in progress:
+            meta_data = parse_json_filepath(json_data)
+            meta_datas.append(meta_data)
+            if not meta_data.pkl_path.exists() or force:
+                data = parse_json(meta_data)
+                pickle_data(data, meta_data)
     return meta_datas
 
 
@@ -143,7 +155,6 @@ def read_pickle(p: Path) -> Any:
 
 
 def compile_data(meta_data: List[MetaData], source: str) -> pd.DataFrame:
-    # TODO: Add other services when data types are fixed.
     fxns: Dict[str, Callable] = {
         "accuweather": accu_to_dataframe,
         "climacell": climacell_to_dataframe,
@@ -163,15 +174,23 @@ def save_compiled_data(source: str, data: pd.DataFrame) -> Path:
     return csv_path
 
 
-if __name__ == "__main__":
-    download_forecast_data_files()
-    meta_data = pickle_data_types()
-    print(f"Downloaded and pickled {len(meta_data)} data points.")
+def main(force_download: bool = False, force_pickle: bool = False) -> None:
+    logging.info("Downloading data from GitHub repo.")
+    download_forecast_data_files(force_download=force_download)
+    logging.info("Converting JSON to data types and pickling.")
+    meta_data = pickle_data_types(force=force_pickle)
+    logging.info(f"Downloaded and pickled {len(meta_data)} data points.")
     sources = set([d.source for d in meta_data])
     for source in sources:
         if source == "accuweather":
+            logging.info("Skipping AccuWeather data preparation.")
             continue
+        logging.info(f"Compiling '{source}' data...")
         md = [d for d in meta_data if d.source == source]
         data = compile_data(md, source)
         csv_path = save_compiled_data(source=source, data=data)
-        print(f"Data from '{source}' saved to '{csv_path.as_posix()}'")
+        logging.info(f"Data from '{source}' saved to '{csv_path.as_posix()}'")
+
+
+if __name__ == "__main__":
+    typer.run(main)
